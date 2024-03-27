@@ -1,7 +1,6 @@
 import numpy as np
 
 from qpy.gates import *
-# from qpy.linalg import *
 
 def dag(state):
     return state.T.conj()
@@ -15,9 +14,6 @@ def measure(state, qubit_index):
     # Dagger
     P0 = dag(state) @ dag(M0) @ M0 @ state
     P1 = dag(state) @ dag(M1) @ M1 @ state
-    
-    # P0 = np.real(np.trace(M0 @ state))
-    # P1 = np.real(np.trace(M1 @ state))
 
     assert np.isclose(P0 + P1, 1)
 
