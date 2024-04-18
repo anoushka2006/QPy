@@ -5,8 +5,7 @@ setuptools.setup(
         version = "0.0.0",
     author="Anoushka Chaudhury",
     author_email="anoushkachaudhury5@gmail.com",
-    description="Simulator for Quantum Circuits",
-    license="MIT",
+    description="QPy - Simulator for Quantum Circuits",
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     classifiers=(
