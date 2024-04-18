@@ -93,6 +93,8 @@ for theta in theta_list:
 plt.plot(theta_list, ratio_list, label = 'Observed Ratio')
 plt.plot(theta_list, (1 - np.cos(theta_list))/2, label = 'Expected Ratio')
 plt.title("Error Correction Demo: No Errors")
+plt.xlabel("Rotation Angle $\\theta$")
+plt.ylabel("Fractional |1⟩ population")
 plt.legend()
 plt.show()
 
@@ -139,6 +141,8 @@ for theta in theta_list:
 plt.plot(theta_list, ratio_list, label = 'Observed Ratio')
 plt.plot(theta_list, (1 - np.cos(theta_list))/2, label = 'Expected Ratio')
 plt.title("Error in 1 qubit value")
+plt.xlabel("Rotation Angle $\\theta$")
+plt.ylabel("Fractional |1⟩ population")
 plt.legend()
 plt.show()
 
@@ -199,5 +203,7 @@ for theta in theta_list:
 plt.plot(theta_list, ratio_list, label = 'Observed Ratio')
 plt.plot(theta_list, (1 - np.cos(theta_list))/2, label = 'Expected Ratio')
 plt.title("Error in 2 qubit values")
+plt.xlabel("Rotation Angle $\\theta$")
+plt.ylabel("Fractional |1⟩ population")
 plt.legend()
 plt.show()

@@ -47,7 +47,7 @@ def prep_state_angle(theta):
     return state
 
 ratio_list = []
-theta_list = np.linspace(0, 2*np.pi, 20)
+theta_list = np.linspace(0, 2*np.pi, 50)
 
 for theta in theta_list:
     
@@ -73,6 +73,8 @@ for theta in theta_list:
 # Plotting observed and expected results 
 plt.plot(theta_list, ratio_list, label = 'Observed Ratio')
 plt.plot(theta_list, (1 - np.cos(theta_list))/2, label = 'Expected Ratio')
+plt.xlabel("Rotation Angle $\\theta$")
+plt.ylabel("Fractional |1⟩ population")
 plt.title("Teleportation Demo")
 plt.legend()
 plt.show()
