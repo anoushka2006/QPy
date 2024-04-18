@@ -1,6 +1,5 @@
 import numpy as np
 
-# from qpy.linalg import *
 #function to apply kronecker function to multiple operators at once
 def apply_kron(operators):
     result = operators[0]
