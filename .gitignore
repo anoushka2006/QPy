@@ -1,1 +1,4 @@
-build/**/*
+
+build/**
+qpy.egg-info/**
+**/__pycache__/**
