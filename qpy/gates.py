@@ -1,187 +1,221 @@
+from typing import Iterable
+
 import numpy as np
 
-#function to apply kronecker function to multiple operators at once
-def apply_kron(operators):
+
+
+# Utility: Perform calculations successively on operator matrices
+def kron(operators: Iterable[np.ndarray]) -> np.ndarray:
+    '''
+    Successive kronecker function for multiple operators
+    kron([A, B, C]) => np.kron(np.kron(A, B), C)
+    '''
     result = operators[0]
     for op in operators[1:]:
         result = np.kron(result, op)
     return result
 
-def dot_prod(operators):
+def dot(operators: Iterable[np.ndarray]) -> np.ndarray:
+    '''
+    Successive dot product for multiple operators
+    dot([A, B, C]) => np.dot(np.dot(A, B), C)
+    '''
     result = operators[0]
     for op in operators[1:]:
         result = np.dot(result, op)
     return result
+ 
 
 
-# function to apply any gate to a target qubit
-def add_gate(gate:np.ndarray, targetq:int, num_qubit:int) -> np.ndarray:
-    start_pad = targetq
-    end_pad = num_qubit - (targetq + 1)
+# Utility: Add gate logic
+def add_gate(gate:np.ndarray, target_qubit:int, num_qubits:int) -> np.ndarray:
+    '''Add a gate at a given qubit'''
+    start_pad = target_qubit
+    end_pad = num_qubits - (target_qubit + 1)
     
-    operator = apply_kron([*[I]*start_pad, gate, *[I]*end_pad])
+    operator = kron([I]*start_pad + [gate] + [I]*end_pad)
     
     return operator
 
-
-# controlled unitary gate
-def control_gate(gate, control_qubit, target_qubit, num_qubits):
-    
+def control_gate(gate: np.ndarray, control_qubit: int, target_qubit: int, num_qubits: int) -> np.ndarray:
+    '''Add a control gate at a given qubit'''
     if control_qubit == target_qubit:
         raise ValueError("Control and Target qubits must be different.")
     
-    if not (0<= control_qubit <= num_qubits) or not (0<= target_qubit <= num_qubits):
-        raise ValueError("Error")
-        
+    if not (0 <= control_qubit < num_qubits):
+        raise ValueError("Control Qubit not within given number of qubits")
+
+    if not (0 <= target_qubit < num_qubits):
+        raise ValueError("Target Qubit not within given number of qubits")
 
     # Apply the controlled gate with padding
     if control_qubit < target_qubit:
-        operator = apply_kron([*[I]*(control_qubit), np.outer(zero,zero), *[I]*(num_qubits - control_qubit - 1)]) + apply_kron([*[I]*(control_qubit), np.outer(one,one), *[I]*(target_qubit - control_qubit - 1), gate, *[I]*(num_qubits - target_qubit - 1)])
+        operator = \
+            add_gate(np.outer(zero,zero), control_qubit, num_qubits) + \
+            kron([I]*control_qubit + [np.outer(one,one)] + [I]*(target_qubit - control_qubit - 1) + [gate] + [I]*(num_qubits - target_qubit - 1))
     else: 
-        operator = apply_kron([*[I]*(control_qubit), np.outer(zero,zero), *[I]*(num_qubits - control_qubit - 1)]) + apply_kron([*[I]*(target_qubit), gate, *[I]*(control_qubit - target_qubit - 1), np.outer(one,one), *[I]*(num_qubits - control_qubit - 1)])
+        operator = \
+            add_gate(np.outer(zero,zero), control_qubit, num_qubits) + \
+            kron([I]*(target_qubit) + [gate] + [I]*(control_qubit - target_qubit - 1) + [np.outer(one,one)] + [I]*(num_qubits - control_qubit - 1))
         
     return operator
 
 
 
+# Variables: Zero, one, and half states
 zero = np.array([1,0])
 one = np.array([0,1])
 plus = 1/np.sqrt(2) * np.array([1,1])
+
+
+
+# Variables: Gate matrices
 I = np.eye(2)
+'''Identity'''
 
-#Single Qubit Operations
-#Pauli-X
-X = np.array([[0,1], 
-              [1,0]])
+Px = np.array([[0,1], 
+               [1,0]])
+'''Pauli-X'''
 
-#Paui-Y
-Y = np.array([[0,-1j],
-              [1j,0]])
+Py = np.array([[0,-1j],
+               [1j,0]])
+'''Pauli-Y'''
 
-#Pauli-Z 
-Z = np.array([[1,0],
-              [0,-1]])
+Pz = np.array([[1,0],
+               [0,-1]])
+'''Pauli-Z'''
 
-#Hadamard
 H = 1/np.sqrt(2)*np.array([[1,1],
                            [1,-1]])
+'''Hadamard Gate'''
 
-#Phase (S,P)
 S = np.array([[1,0],
               [0,1j]])
+'''Phase (S,Q)'''
 
-#pi/8
 T = np.array([[1,0],
               [0,np.exp(1j*np.pi/4)]])
+'''pi/8'''
 
-#Controlled Not / CX
-cnot = np.array([[1,0,0,0],
+CX = np.array([[1,0,0,0],
                  [0,1,0,0],
                  [0,0,0,1],
                  [0,0,1,0]])
+'''Controlled X'''
 
-#Controlled Z
 CZ = np.array([[1,0,0,0],
                [0,1,0,0],
                [0,0,1,0],
                [0,0,0,-1]])
+'''Controlled Z'''
 
 swap = np.array([[1,0,0,0],
                  [0,0,1,0],
                  [0,1,0,0],
                  [0,0,0,1]])
-
+'''Swap'''
 
 def Rx(theta):
+    '''Rotation in X by radian angle theta'''
     return np.array([[np.cos(theta/2), -1j*np.sin(theta/2)],
-                    [-1j*np.sin(theta/2), np.cos(theta/2)]])
+                     [-1j*np.sin(theta/2), np.cos(theta/2)]])
 
 def Rz(theta):
+    '''Rotation in Z by radian angle theta'''
     return np.array([[1,0],[0, np.exp(1j*theta)]])
 
 
 
-# implement CNOT on adjacent qubits
-def cnot_adj(controlq, targetq, num_qubits):
-    if targetq != controlq + 1:
+def CX_ADJ(control_qubit:int, target_qubit:int, num_qubits:int) -> np.ndarray:
+    '''CX on adjacent qubits'''
+    if target_qubit != control_qubit + 1:
         raise ValueError("Control and Target qubits must be adjacent.")
     
-    #pad CNOT matrix 
-    start_padding = controlq
-    end_padding = num_qubits - (targetq + 1)
-    operator = apply_kron([*[I]*start_padding, cnot, *[I]*end_padding])
+    start_padding = control_qubit
+    end_padding = num_qubits - (target_qubit + 1)
+    operator = kron([I]*start_padding + [CX] + [I]*end_padding)
 
     return operator
 
 
-#implementing CNOT on non-adjacent qubits 
-def cnot_nonadj(control_qubit:int, target_qubit:int, num_qubits:int) -> np.ndarray:
-    
+
+def CX_NONADJ(control_qubit:int, target_qubit:int, num_qubits:int) -> np.ndarray:
+    '''CX on non-adjacent qubits'''
     if control_qubit == target_qubit:
         raise ValueError("Control and Target qubits must be different.")
     
-    if not (0<= control_qubit <= num_qubits) or not (0<= target_qubit <= num_qubits):
-        raise ValueError("Error")
-        
-
-    # Apply the controlled NOT gate with padding
+    if not (0 <= control_qubit < num_qubits):
+        raise ValueError("Control Qubit not within given number of qubits")
+    
+    if not (0 <= target_qubit < num_qubits):
+        raise ValueError("Target Qubit not within given number of qubits")
+    
     if control_qubit < target_qubit:
-        operator = apply_kron([*[I]*(control_qubit), np.outer(zero,zero), *[I]*(num_qubits - control_qubit - 1)]) + apply_kron([*[I]*(control_qubit), np.outer(one,one), *[I]*(target_qubit - control_qubit - 1), X, *[I]*(num_qubits - target_qubit - 1)])
+        operator = \
+            add_gate(np.outer(zero,zero), control_qubit, num_qubits) + \
+            kron([I]*(control_qubit) + [np.outer(one,one)] + [I]*(target_qubit - control_qubit - 1) + [Px] + [I]*(num_qubits - target_qubit - 1))
     else: 
-        operator = apply_kron([*[I]*(control_qubit), np.outer(zero,zero), *[I]*(num_qubits - control_qubit - 1)]) + apply_kron([*[I]*(target_qubit), X, *[I]*(control_qubit - target_qubit - 1), np.outer(one,one), *[I]*(num_qubits - control_qubit - 1)])
+        operator = \
+            add_gate(np.outer(zero,zero), control_qubit, num_qubits) + \
+            kron([I]*(target_qubit) + [Px] + [I]*(control_qubit - target_qubit - 1) + [np.outer(one,one)] + [I]*(num_qubits - control_qubit - 1))
         
     return operator
 
 
-# function to generate a GHZ State
-def generate_ghz_state(num_qubits):
+
+def generate_ghz_state(num_qubits:int) -> np.ndarray:
+    '''Function to generate a Greenberger-Horne-Zeilinger state'''
     # Initialising the state to |0...0⟩
-    ghz_state = apply_kron([zero] * (num_qubits))
+    ghz_state = kron([zero] * (num_qubits))
 
     # Apply Hadamard gate to the last qubit
     ghz_state = add_gate(H,0,num_qubits)@ghz_state
 
     # Apply CNOT gates to create GHZ state
     for i in range(num_qubits - 1):
-        ghz_state = cnot_adj(i, i+1, num_qubits)@ghz_state
+        ghz_state = CX_ADJ(i, i+1, num_qubits)@ghz_state
             
     return ghz_state
 
 
 
-#toffoli gate 
-def TOFFOLI(control1, control2, target, num_qubits):
-    
-    if control1 == target or control2 == target:
+def TOFFOLI(control_qubit_1:int, control_qubit_2:int, target_qubit:int, num_qubits:int) -> np.ndarray:
+    '''TOFFOLI Gate'''
+    if control_qubit_1 == target_qubit or control_qubit_2 == target_qubit:
         raise ValueError("Control and Target qubits must be different.")
     
-    if not (0<= control1 <= num_qubits-1) or not (0<= target <= num_qubits-1) or not (0<= control2 <= num_qubits-1):
-        raise ValueError("Control and target qubits must be within range")
+    if not (0 <= control_qubit_1 < num_qubits):
+        raise ValueError("First Control Qubit not within given number of qubits")
+
+    if not (0 <= control_qubit_2 < num_qubits):
+        raise ValueError("Second Control Qubit not within given number of qubits")
+    
+    if not (0 <= target_qubit < num_qubits):
+        raise ValueError("Target Qubit not within given number of qubits")
         
     # Ensure control_qubits are ordered in ascending order of indices
-    c1, c2 = sorted([control1, control2])
+    c1, c2 = sorted([control_qubit_1, control_qubit_2])
 
     # Apply the controlled NOT gate with padding
-    if c2 < target:     
-        term1 = apply_kron([*[I]*(c1), np.outer(zero,zero), *[I]*(c2 - c1 - 1), np.outer(zero,zero), *[I]*(target - c2 - 1), I, *[I]*(num_qubits - target - 1)])
-        term2 = apply_kron([*[I]*(c1), np.outer(one,one), *[I]*(c2 - c1 - 1), np.outer(zero,zero), *[I]*(target - c2 - 1), I, *[I]*(num_qubits - target - 1)]) 
-        term3 = apply_kron([*[I]*(c1), np.outer(zero,zero), *[I]*(c2 - c1 - 1), np.outer(one,one), *[I]*(target - c2 - 1), I, *[I]*(num_qubits - target - 1)]) 
-        term4 = apply_kron([*[I]*(c1), np.outer(one,one), *[I]*(c2 - c1 - 1), np.outer(one,one), *[I]*(target - c2 - 1), X, *[I]*(num_qubits - target - 1)])
+    if c2 < target_qubit:
+        term1 = kron([I]*(c1) + [np.outer(zero,zero)] + [I]*(c2 - c1 - 1) + [np.outer(zero,zero)] + [I]*(target_qubit - c2 - 1) + [I] + [I]*(num_qubits - target_qubit - 1))
+        term2 = kron([I]*(c1) + [np.outer(one,one)] + [I]*(c2 - c1 - 1) + [np.outer(zero,zero)] + [I]*(target_qubit - c2 - 1) + [I] + [I]*(num_qubits - target_qubit - 1))
+        term3 = kron([I]*(c1) + [np.outer(zero,zero)] + [I]*(c2 - c1 - 1) + [np.outer(one,one)] + [I]*(target_qubit - c2 - 1) + [I] + [I]*(num_qubits - target_qubit - 1))
+        term4 = kron([I]*(c1) + [np.outer(one,one)] + [I]*(c2 - c1 - 1) + [np.outer(one,one)] + [I]*(target_qubit - c2 - 1) + [Px] + [I]*(num_qubits - target_qubit - 1))
         operator = term1 + term2 + term3 + term4
         
-    elif c1 < target < c2: # If target qubit is in the middle of both controls
-        term1 = apply_kron([*[I]*(c1), np.outer(zero,zero), *[I]*(target - c1 - 1), I, *[I]*(c2 - target - 1), np.outer(zero,zero), *[I]*(num_qubits - c2 - 1)]) 
-        term2 = apply_kron([*[I]*(c1), np.outer(one,one), *[I]*(target - c1 - 1), I, *[I]*(c2 - target - 1), np.outer(zero,zero), *[I]*(num_qubits - c2 - 1)]) 
-        term3 = apply_kron([*[I]*(c1), np.outer(zero,zero), *[I]*(target - c1 - 1), I, *[I]*(c2 - target - 1), np.outer(one,one), *[I]*(num_qubits - c2 - 1)]) 
-        term4 = apply_kron([*[I]*(c1), np.outer(one,one), *[I]*(target - c1 - 1), X, *[I]*(c2 - target - 1), np.outer(one,one), *[I]*(num_qubits - c2 - 1)])
+    elif c1 < target_qubit < c2: # If target qubit is in the middle of both controls
+        term1 = kron([I]*(c1) + [np.outer(zero,zero)] + [I]*(target_qubit - c1 - 1) + [I] + [I]*(c2 - target_qubit - 1) + [np.outer(zero,zero)] + [I]*(num_qubits - c2 - 1))
+        term2 = kron([I]*(c1) + [np.outer(one,one)] + [I]*(target_qubit - c1 - 1) + [I] + [I]*(c2 - target_qubit - 1) + [np.outer(zero,zero)] + [I]*(num_qubits - c2 - 1))
+        term3 = kron([I]*(c1) + [np.outer(zero,zero)] + [I]*(target_qubit - c1 - 1) + [I] + [I]*(c2 - target_qubit - 1) + [np.outer(one,one)] + [I]*(num_qubits - c2 - 1))
+        term4 = kron([I]*(c1) + [np.outer(one,one)] + [I]*(target_qubit - c1 - 1) + [Px] + [I]*(c2 - target_qubit - 1) + [np.outer(one,one)] + [I]*(num_qubits - c2 - 1))
         operator = term1 + term2 + term3 + term4
         
-    elif target < c1: # if target is before both controls
-        term1 = apply_kron([*[I]*(target), I, *[I]*(c1 - target - 1), np.outer(zero,zero), *[I]*(c2 - c1- 1), np.outer(zero,zero), *[I]*(num_qubits - c2 - 1)])
-        term2 = apply_kron([*[I]*(target), I, *[I]*(c1 - target - 1), np.outer(one,one), *[I]*(c2 - c1- 1), np.outer(zero,zero), *[I]*(num_qubits - c2 - 1)])
-        term3 = apply_kron([*[I]*(target), I, *[I]*(c1 - target - 1), np.outer(zero,zero), *[I]*(c2 - c1- 1), np.outer(one,one), *[I]*(num_qubits - c2 - 1)])
-        term4 = apply_kron([*[I]*(target), X, *[I]*(c1 - target - 1), np.outer(one,one), *[I]*(c2 - c1- 1), np.outer(one, one), *[I]*(num_qubits - c2 - 1)])
+    elif target_qubit < c1: # if target is before both controls
+        term1 = kron([I]*(target_qubit) + [I] + [I]*(c1 - target_qubit - 1) + [np.outer(zero,zero)] + [I]*(c2 - c1- 1) + [np.outer(zero,zero)] + [I]*(num_qubits - c2 - 1))
+        term2 = kron([I]*(target_qubit) + [I] + [I]*(c1 - target_qubit - 1) + [np.outer(one,one)] + [I]*(c2 - c1- 1) + [np.outer(zero,zero)] + [I]*(num_qubits - c2 - 1))
+        term3 = kron([I]*(target_qubit) + [I] + [I]*(c1 - target_qubit - 1) + [np.outer(zero,zero)] + [I]*(c2 - c1- 1) + [np.outer(one,one)] + [I]*(num_qubits - c2 - 1))
+        term4 = kron([I]*(target_qubit) + [Px] + [I]*(c1 - target_qubit - 1) + [np.outer(one,one)] + [I]*(c2 - c1- 1) + [np.outer(one, one)] + [I]*(num_qubits - c2 - 1))
         operator = term1 + term2 + term3 + term4
         
     return operator
-    
